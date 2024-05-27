@@ -20,25 +20,10 @@
 #define pin_sensorRE 8
 
 // velocidades
-#define VELOCIDADE_CURVA 250
-#define VELOCIDADE_RETA 150
-#define VELOCIDADE_MEDIA 80
+#define VELOCIDADE_CURVA 255
+#define VELOCIDADE_RETA 230
+#define VELOCIDADE_MEDIA 190
 #define VELOCIDADE_BAIXA 0
-
-// Coeficientes PID ajustados
-#define KP 0.4  // Reduzido para diminuir a sensibilidade às pequenas variações
-#define KI 0.1  // Ajustado para acumular menos erro integral
-#define KD 0.3  // Reduzido para diminuir a resposta a mudanças rápidas de erro
-
-// Variáveis PID
-float erroPID = 0;
-float erroAnterior = 0;
-float somaErro = 0;
-float deltaErro = 0;
-unsigned long tempoAnterior = 0;
-
-// Definir um valor de referência para a posição central
-#define POSICAO_REFERENCIA 3  // Supondo que o sensor3 é a posição central
 
 bool sensor1 = 0;
 bool sensor2 = 0;
@@ -57,6 +42,8 @@ int frequenciaRE = 0;
 
 int velocidadeMotorD = 0;
 int velocidadeMotorE = 0;
+int velocidadeMotorD2 = 0;
+int velocidadeMotorE2 = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -78,73 +65,36 @@ void loop() {
     // Curva fechada para a direita
     velocidadeMotorE = VELOCIDADE_CURVA;
     velocidadeMotorD = VELOCIDADE_BAIXA;
+    velocidadeMotorE2 = VELOCIDADE_BAIXA;
+    velocidadeMotorD2 = VELOCIDADE_RETA;
   } else if (sensor5 == PRETO) {
     // Curva fechada para a esquerda
     velocidadeMotorE = VELOCIDADE_BAIXA;
     velocidadeMotorD = VELOCIDADE_CURVA;
+    velocidadeMotorE2 = VELOCIDADE_RETA;
+    velocidadeMotorD2 = VELOCIDADE_BAIXA;
   } else if (sensor4 == PRETO) {
     // Curva leve para a direita
     velocidadeMotorE = VELOCIDADE_MEDIA;
     velocidadeMotorD = VELOCIDADE_RETA;
+    velocidadeMotorE2 = VELOCIDADE_BAIXA;
+    velocidadeMotorD2 = VELOCIDADE_BAIXA;
   }  else if (sensor2 == PRETO) {
     // Curva leve para a esquerda
     velocidadeMotorE = VELOCIDADE_RETA;
     velocidadeMotorD = VELOCIDADE_MEDIA;
+    velocidadeMotorE2 = VELOCIDADE_BAIXA;
+    velocidadeMotorD2 = VELOCIDADE_BAIXA;
   } else if (sensor3 == PRETO) {
     // Motores andam reto
     velocidadeMotorE = VELOCIDADE_RETA;
     velocidadeMotorD = VELOCIDADE_RETA;
-  } else {
-    calcularPID();
+    velocidadeMotorE2 = VELOCIDADE_BAIXA;
+    velocidadeMotorD2 = VELOCIDADE_BAIXA;
   }
 
   analogWrite(motorE1, velocidadeMotorE);
+  analogWrite(motorE2, velocidadeMotorE2);
   analogWrite(motorD1, velocidadeMotorD);
-
-  delay(5);
-}
-
-void calcularPID() {
-  int posicaoAtual = lerPosicaoAtual();
-
-  erroPID = POSICAO_REFERENCIA - posicaoAtual;
-  somaErro += erroPID;
-  unsigned long tempoAtual = millis();
-  
-  if (tempoAtual - tempoAnterior >= 10) { // Atualização a cada 10 ms
-    deltaErro = (erroPID - erroAnterior) / (tempoAtual - tempoAnterior);
-    float ajuste = KP * erroPID + KI * somaErro + KD * deltaErro;
-
-    // escreve a velocidade ajustada para as variaveis globais da veloc dos motores
-    velocidadeMotorE = constrain(120 + ajuste, 0, 255);
-    velocidadeMotorD = constrain(120 - ajuste, 0, 255);
-
-    tempoAnterior = tempoAtual;
-    erroAnterior = erroPID;
-  }
-}
-
-
-int lerPosicaoAtual() {
-  if (sensor1 == PRETO) return 1;
-  if (sensor2 == PRETO) return 2;
-  if (sensor3 == PRETO) return 3;
-  if (sensor4 == PRETO) return 4;
-  if (sensor5 == PRETO) return 5;
-  return 3; // Se nenhum sensor detectar preto, assumir centro
-}
-
-void frequenciaMotor(int ldrPin, int& lastSensorValue, unsigned long& lastTransitionTime, int& frequency) {
-  int sensorValue = digitalRead(ldrPin);
-
-  if (sensorValue == HIGH && lastSensorValue == LOW) {
-    unsigned long currentTime = millis();
-    unsigned long timeSinceLastTransition = currentTime - lastTransitionTime;
-    lastTransitionTime = currentTime;
-
-    // Calcular frequência (transições por segundo)
-    frequency = 1000 / timeSinceLastTransition;
-  }
-
-  lastSensorValue = sensorValue;
+  analogWrite(motorD2, velocidadeMotorD2);
 }
