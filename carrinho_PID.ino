@@ -21,12 +21,10 @@ bool sensor1 = 0, sensor2 = 0, sensor3 = 0, sensor4 = 0, sensor5 = 0;
 
 int velocidadeMotorD = 0, velocidadeMotorE = 0, velocidadeMotorD2 = 0, velocidadeMotorE2 = 0;
 
-int ultimo_sensor_lido = 0;
-
 float ERRO = 0, PID = 0, proporcional = 0, integral = 0, derivativo = 0, U_ERRO = 0;
-float kp = 14;  // PRIMEIRO A REAGIR => quanto maior maior a primeira reacao
-float ki = 0.5; // ACELERA AO LONGO DO TEMPO
-float kd = 16;  // SUAVIZACAO
+float kp = 485;  // PRIMEIRO A REAGIR => quanto maior maior a primeira reacao
+float ki = 0.35; // ACELERA AO LONGO DO TEMPO
+float kd = 300;  // SUAVIZACAO
 
 // Inicialize as velocidades com VELOCIDADE_MAXIMA
 int velocidade_direita = VELOCIDADE_MAXIMA;
@@ -49,7 +47,6 @@ void loop() {
   controle_motor();
 }
 
-
 void LerEstadoSensores() {
   sensor1 = digitalRead(pin_sensor1);
   sensor2 = digitalRead(pin_sensor2);
@@ -59,50 +56,35 @@ void LerEstadoSensores() {
 }
 
 void calculaerro() {
+  float erro = 0;
   if (sensor1 == PRETO) {
-    ERRO += -0.1;
-    ultimo_sensor_lido = 1;
+    erro -= 0.265;
   } else if (sensor5 == PRETO) {
-    ERRO += 0.1;
-    ultimo_sensor_lido = 5;
+    erro += 0.265;
   } else if (sensor4 == PRETO) {
-    ERRO += 0.01;
-    ultimo_sensor_lido = 4;
+    erro += 0.0365;
   } else if (sensor2 == PRETO) {
-    ERRO += -0.01;
-    ultimo_sensor_lido = 2;
+    erro -= 0.0365;
   } else if (sensor3 == PRETO) {
     ERRO = 0;
-    ultimo_sensor_lido = 3;
-  } else if (sensor1 == BRANCO && sensor2 == BRANCO && sensor3 == BRANCO && sensor4 == BRANCO && sensor5 == BRANCO) {
-    // Aumenta módulo do erro
-    if(ERRO > 0) {
-      ERRO += 0.001;
-    } else if (ERRO < 0) {
-      ERRO -= 0.001;
-    }
   }
+  ERRO += erro;
 }
 
 void calculaPID() {
-  ERRO = constrain(ERRO, -50, 50);
   if (ERRO == 0) {
     integral = 0;
   }
+  
   proporcional = ERRO;
-  integral = integral + ERRO;
-  if (integral > VELOCIDADE_MAXIMA) {
-    integral = VELOCIDADE_MAXIMA;
-  } else if (integral < -VELOCIDADE_MAXIMA) {
-    integral = -VELOCIDADE_MAXIMA;
-  }
+  integral = constrain(integral + ERRO, -2000000, 2000000);
   derivativo = ERRO - U_ERRO;
   PID = ((kp * proporcional) + (ki * integral) + (kd * derivativo));
   U_ERRO = ERRO;
 }
 
 void controle_motor() {
-  int ajuste = PID;
+  long ajuste = PID/100;
 
   if (ajuste >= 0) {
     velocidade_esquerda = VELOCIDADE_MAXIMA - ajuste;
@@ -116,20 +98,18 @@ void controle_motor() {
   velocidade_direita = constrain(velocidade_direita, -VELOCIDADE_MAXIMA, VELOCIDADE_MAXIMA);
 
   // Realiza curvas fechadas
-  if(ultimo_sensor_lido == 5 || ultimo_sensor_lido == 1) {
-    if (velocidade_esquerda < 0 && velocidade_direita > 0) {
-      // motor da esquerda para tras
-      velocidadeMotorE = 0;
-      velocidadeMotorD = velocidade_direita;
-      velocidadeMotorE2 = (velocidade_esquerda * -1);
-      velocidadeMotorD2 = 0;
-    } else if (velocidade_esquerda > 0 && velocidade_direita < 0) {
-      // motor da direita para tras
-      velocidadeMotorE = velocidade_esquerda;
-      velocidadeMotorD = 0;
-      velocidadeMotorE2 = 0;
-      velocidadeMotorD2 = (velocidade_direita * -1);
-    }
+  if (velocidade_esquerda < 0 && velocidade_direita > 0) {
+    // motor da esquerda para tras
+    velocidadeMotorE = 0;
+    velocidadeMotorD = velocidade_direita;
+    velocidadeMotorE2 = (velocidade_esquerda * -1);
+    velocidadeMotorD2 = 0;
+  } else if (velocidade_esquerda > 0 && velocidade_direita < 0) {
+    // motor da direita para tras
+    velocidadeMotorE = velocidade_esquerda;
+    velocidadeMotorD = 0;
+    velocidadeMotorE2 = 0;
+    velocidadeMotorD2 = (velocidade_direita * -1);
   } else {
     velocidadeMotorE = constrain(velocidade_esquerda, 0, VELOCIDADE_MAXIMA);
     velocidadeMotorD = constrain(velocidade_direita, 0, VELOCIDADE_MAXIMA);
