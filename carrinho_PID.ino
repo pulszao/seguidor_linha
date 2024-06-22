@@ -41,13 +41,13 @@ void setup() {
 }
 
 void loop() {
-  LerEstadoSensores();
-  calculaerro();
+  lerEstadoSensores();
+  calculaErro();
   calculaPID();
   controle_motor();
 }
 
-void LerEstadoSensores() {
+void lerEstadoSensores() {
   sensor1 = digitalRead(pin_sensor1);
   sensor2 = digitalRead(pin_sensor2);
   sensor3 = digitalRead(pin_sensor3);
@@ -55,7 +55,7 @@ void LerEstadoSensores() {
   sensor5 = digitalRead(pin_sensor5);
 }
 
-void calculaerro() {
+void calculaErro() {
   float erro = 0;
   if (sensor1 == PRETO) {
     erro -= 0.265;
@@ -102,14 +102,14 @@ void controle_motor() {
     // motor da esquerda para tras
     velocidadeMotorE = 0;
     velocidadeMotorD = velocidade_direita;
-    velocidadeMotorE2 = (velocidade_esquerda * -1);
+    velocidadeMotorE2 = constrain((velocidade_esquerda * -1), 0, VELOCIDADE_MAXIMA/2);
     velocidadeMotorD2 = 0;
   } else if (velocidade_esquerda > 0 && velocidade_direita < 0) {
     // motor da direita para tras
     velocidadeMotorE = velocidade_esquerda;
     velocidadeMotorD = 0;
     velocidadeMotorE2 = 0;
-    velocidadeMotorD2 = (velocidade_direita * -1);
+    velocidadeMotorD2 = constrain((velocidade_direita * -1), 0, VELOCIDADE_MAXIMA/2);
   } else {
     velocidadeMotorE = constrain(velocidade_esquerda, 0, VELOCIDADE_MAXIMA);
     velocidadeMotorD = constrain(velocidade_direita, 0, VELOCIDADE_MAXIMA);
